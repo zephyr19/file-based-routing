@@ -1,12 +1,9 @@
-// @ts-check
+// @ts-nocheck
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const ReactDOMServer = require("react-dom/server");
 const scanDir = require("./server/genRouterConfig.js");
-
-const isTest = process.env.NODE_ENV === "test" || !!process.env.VITE_TEST_BUILD;
-
-process.env.MY_CUSTOM_SECRET = "API_KEY_qwertyuiop";
 
 async function createServer(
   root = process.cwd(),
@@ -30,7 +27,7 @@ async function createServer(
   if (!isProd) {
     vite = await require("vite").createServer({
       root,
-      logLevel: isTest ? "error" : "info",
+      logLevel: "info",
       server: {
         middlewareMode: "ssr",
         watch: {
@@ -55,13 +52,36 @@ async function createServer(
   app.use("*", async (req, res) => {
     try {
       const url = req.originalUrl;
+      console.log("url:", url);
 
       let template, render;
       if (!isProd) {
         // always read fresh template in dev
         template = fs.readFileSync(resolve("index.html"), "utf-8");
         template = await vite.transformIndexHtml(url, template);
-        render = (await vite.ssrLoadModule("/src/entry-server.jsx")).render;
+
+        const paths = url.split("/");
+        let route = router.childRoutes;
+        let match;
+
+        for (let i = 1; i < paths.length; i++) {
+          match = route.find((r) => r.path === paths[i] || r.isDynamic);
+          route = match?.childRoutes;
+
+          if (!route) break;
+        }
+
+        console.log("match:", match);
+
+        if (!match) {
+          res.status(404).end("Not Found");
+          return;
+        } else {
+          res.body = "Hello World";
+        }
+
+        const module = await vite.ssrLoadModule(match.dirname);
+        render = () => ReactDOMServer.renderToString(module.default());
       } else {
         template = indexProd;
         render = require("./dist/server/entry-server.js").render;
@@ -76,6 +96,7 @@ async function createServer(
       }
 
       const html = template.replace(`<!--app-html-->`, appHtml);
+      console.log("appHtml: ", appHtml);
 
       res.status(200).set({ "Content-Type": "text/html" }).end(html);
     } catch (e) {
@@ -88,13 +109,8 @@ async function createServer(
   return { app, vite };
 }
 
-if (!isTest) {
-  createServer().then(({ app }) =>
-    app.listen(3000, () => {
-      console.log("http://localhost:3000");
-    })
-  );
-}
-
-// for test use
-exports.createServer = createServer;
+createServer().then(({ app }) =>
+  app.listen(3000, () => {
+    console.log("http://localhost:3000");
+  })
+);

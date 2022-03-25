@@ -9,7 +9,7 @@ const path = require("path");
 // }
 
 async function scanDir(dirname, isFile) {
-  const paths = dirname.split("/");
+  const paths = dirname.split(path.sep);
   const name = paths[paths.length - 1].split(".")[0];
   const route = {
     path: name,
