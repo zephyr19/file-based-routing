@@ -64,8 +64,14 @@ async function createServer(
         let route = router.childRoutes;
         let match;
 
+        const queries = {};
         for (let i = 1; i < paths.length; i++) {
           match = route.find((r) => r.path === paths[i] || r.isDynamic);
+          if (match.isDynamic) {
+            queries[
+              match.path.substring(1).substring(0, match.path.length - 2)
+            ] = paths[i];
+          }
           route = match?.childRoutes;
 
           if (!route) break;
@@ -81,7 +87,7 @@ async function createServer(
         }
 
         const module = await vite.ssrLoadModule(match.dirname);
-        render = () => ReactDOMServer.renderToString(module.default());
+        render = () => ReactDOMServer.renderToString(module.default(queries));
       } else {
         template = indexProd;
         render = require("./dist/server/entry-server.js").render;
@@ -96,7 +102,6 @@ async function createServer(
       }
 
       const html = template.replace(`<!--app-html-->`, appHtml);
-      console.log("appHtml: ", appHtml);
 
       res.status(200).set({ "Content-Type": "text/html" }).end(html);
     } catch (e) {
