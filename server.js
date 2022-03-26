@@ -58,16 +58,17 @@ async function createServer(
       if (!isProd) {
         // always read fresh template in dev
         template = fs.readFileSync(resolve("index.html"), "utf-8");
-        template = await vite.transformIndexHtml(url, template);
 
         const paths = url.split("/");
         let route = router.childRoutes;
         let match;
-
+        let APP_URL = "";
         const queries = {};
+
         for (let i = 1; i < paths.length; i++) {
           match = route.find((r) => r.path === paths[i] || r.isDynamic);
-          if (match.isDynamic) {
+          APP_URL += "/" + match?.path;
+          if (match?.isDynamic) {
             queries[
               match.path.substring(1).substring(0, match.path.length - 2)
             ] = paths[i];
@@ -77,14 +78,27 @@ async function createServer(
           if (!route) break;
         }
 
-        console.log("match:", match);
-
         if (!match) {
           res.status(404).end("Not Found");
           return;
         } else {
           res.body = "Hello World";
         }
+
+        template = template.replace(
+          "<!--IMPORT_APP_STATEMENT-->",
+          `
+<script type="module">
+  import ReactDOM from "react-dom";
+  import App from "/src/pages${APP_URL}";
+
+  ReactDOM.hydrate(App(${JSON.stringify(
+    queries
+  )}), document.getElementById("app"));
+</script>
+          `
+        );
+        template = await vite.transformIndexHtml(url, template);
 
         const module = await vite.ssrLoadModule(match.dirname);
         render = () => ReactDOMServer.renderToString(module.default(queries));
