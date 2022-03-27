@@ -51,7 +51,7 @@ async function createServer(
 
   app.use("*", async (req, res) => {
     try {
-      const url = req.originalUrl;
+      const url = req.originalUrl === "/" ? "/Home" : req.originalUrl;
       console.log("url:", url);
 
       let template, render;
@@ -81,8 +81,6 @@ async function createServer(
         if (!match) {
           res.status(404).end("Not Found");
           return;
-        } else {
-          res.body = "Hello World";
         }
 
         template = template.replace(
