@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import Link from "../../../../utils/Link";
+import { useRouter } from "../../../../utils/router";
 
-const Comments = (queries) => {
+const Comments = () => {
+  const { query } = useRouter();
   return (
     <>
-      <h1>comments Page, Problem id: {queries.id}</h1>
+      <h1>comments Page, Problem id: {query.id}</h1>
       <Link href="/">back to home</Link>
     </>
   );

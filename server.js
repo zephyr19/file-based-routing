@@ -16,7 +16,6 @@ async function createServer(
     : "";
 
   const router = await scanDir(path.join(__dirname, "src/pages"));
-  console.log(router);
 
   const app = express();
 
@@ -51,10 +50,13 @@ async function createServer(
 
   app.use("*", async (req, res) => {
     try {
-      const url = req.originalUrl === "/" ? "/Home" : req.originalUrl;
+      const url = req.originalUrl === "/" ? "/index" : req.originalUrl;
       console.log("url:", url);
 
-      let template, render;
+      let template,
+        render,
+        appModule,
+        query = {};
       if (!isProd) {
         // always read fresh template in dev
         template = fs.readFileSync(resolve("index.html"), "utf-8");
@@ -63,15 +65,13 @@ async function createServer(
         let route = router.childRoutes;
         let match;
         let APP_URL = "";
-        const queries = {};
 
         for (let i = 1; i < paths.length; i++) {
           match = route.find((r) => r.path === paths[i] || r.isDynamic);
           APP_URL += "/" + match?.path;
           if (match?.isDynamic) {
-            queries[
-              match.path.substring(1).substring(0, match.path.length - 2)
-            ] = paths[i];
+            query[match.path.substring(1).substring(0, match.path.length - 2)] =
+              paths[i];
           }
           route = match?.childRoutes;
 
@@ -88,30 +88,26 @@ async function createServer(
           `
 <script type="module">
   import ReactDOM from "react-dom";
+  import { RouterContextProvider } from '/utils/router';
   import App from "/src/pages${APP_URL}";
 
-  ReactDOM.hydrate(App(${JSON.stringify(
-    queries
-  )}), document.getElementById("app"));
+  ReactDOM.hydrate(
+    <RouterContextProvider value={${query}}>
+      <App />
+    <RouterContextProvider />
+  , document.getElementById("app"));
 </script>
           `
         );
         template = await vite.transformIndexHtml(url, template);
-
-        const module = await vite.ssrLoadModule(match.dirname);
-        render = () => ReactDOMServer.renderToString(module.default(queries));
+        appModule = await vite.ssrLoadModule(match.dirname);
+        render = (await vite.ssrLoadModule("/src/entry-server.tsx")).render;
       } else {
         template = indexProd;
         render = require("./dist/server/entry-server.js").render;
       }
 
-      const context = {};
-      const appHtml = render(url, context);
-
-      if (context.url) {
-        // Somewhere a `<Redirect>` was rendered
-        return res.redirect(301, context.url);
-      }
+      const appHtml = render({ query }, appModule.default);
 
       const html = template.replace(`<!--app-html-->`, appHtml);
 

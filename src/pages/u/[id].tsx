@@ -1,10 +1,12 @@
 import React from "react";
 import Link from "../../../utils/Link";
+import { useRouter } from "../../../utils/router";
 
-const User = (queries) => {
+const User = () => {
+  const { query } = useRouter();
   return (
     <>
-      <h1>User Page, id: {queries.id}</h1>
+      <h1>User Page, id: {query.id}</h1>
       <Link href="/">back to home</Link>
     </>
   );
