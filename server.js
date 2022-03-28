@@ -1,21 +1,19 @@
-// @ts-nocheck
-const fs = require("fs");
-const path = require("path");
-const express = require("express");
-const ReactDOMServer = require("react-dom/server");
-const scanDir = require("./server/genRouterConfig.js");
+import fs from "fs";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+import express from "express";
+import { matchRoutes } from "./server/router.js";
 
 async function createServer(
   root = process.cwd(),
   isProd = process.env.NODE_ENV === "production"
 ) {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
   const resolve = (p) => path.resolve(__dirname, p);
 
   const indexProd = isProd
     ? fs.readFileSync(resolve("dist/client/index.html"), "utf-8")
     : "";
-
-  const router = await scanDir(path.join(__dirname, "src/pages"));
 
   const app = express();
 
@@ -24,7 +22,8 @@ async function createServer(
    */
   let vite;
   if (!isProd) {
-    vite = await require("vite").createServer({
+    const { createServer } = await import("vite");
+    vite = await createServer({
       root,
       logLevel: "info",
       server: {
@@ -50,38 +49,22 @@ async function createServer(
 
   app.use("*", async (req, res) => {
     try {
-      const url = req.originalUrl === "/" ? "/index" : req.originalUrl;
+      // const url = req.originalUrl === "/" ? "/index" : req.originalUrl;
+      const url = req.originalUrl;
       console.log("url:", url);
 
-      let template,
-        render,
-        appModule,
-        query = {};
+      const { match, query, APP_URL } = matchRoutes(url);
+
+      if (!match) {
+        res.status(404).end("Not Found");
+        return;
+      }
+
+      let template, render, appModule;
+
       if (!isProd) {
         // always read fresh template in dev
         template = fs.readFileSync(resolve("index.html"), "utf-8");
-
-        const paths = url.split("/");
-        let route = router.childRoutes;
-        let match;
-        let APP_URL = "";
-
-        for (let i = 1; i < paths.length; i++) {
-          match = route.find((r) => r.path === paths[i] || r.isDynamic);
-          APP_URL += "/" + match?.path;
-          if (match?.isDynamic) {
-            query[match.path.substring(1).substring(0, match.path.length - 2)] =
-              paths[i];
-          }
-          route = match?.childRoutes;
-
-          if (!route) break;
-        }
-
-        if (!match) {
-          res.status(404).end("Not Found");
-          return;
-        }
 
         template = template.replace(
           "<!--IMPORT_APP_STATEMENT-->",
@@ -89,7 +72,7 @@ async function createServer(
 <script type="module">
   import ReactDOM from "react-dom";
   import { RouterContextProvider } from '/utils/router';
-  import App from "/src/pages${APP_URL}";
+  import App from "/src/pages/${APP_URL}";
 
   ReactDOM.hydrate(
     <RouterContextProvider value={${query}}>
