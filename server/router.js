@@ -10,18 +10,24 @@ import { fileURLToPath } from "url";
 // }
 
 async function scanDir(dirname, isFile) {
+  // 提取 dirname 文件路径中的最后一个层级，作为 route.path 和 url 进行匹配
+  // path.sep 为文件路径的分隔符，Windows：'\\'; Linux: '/'; 兼容各平台
   const filename = dirname.split(path.sep).at(-1);
   const nameEndPos =
     filename[0] === "[" ? filename.lastIndexOf(".") : filename.indexOf(".");
   const name = nameEndPos > -1 ? filename.substring(0, nameEndPos) : filename;
+
   const route = {
     path: name,
-    isDynamic: name[0] === "[" && name[name.length - 1] === "]",
+    isDynamic: name[0] === "[" && name.at(-1) === "]",
     dirname,
     childRoutes: [],
   };
+
+  // 是文件，直接返回生成的路由
   if (isFile) return route;
 
+  // 是文件夹，则开始扫描，递归生成路由，放到 childRoutes 数组中
   const dirents = await fs.opendir(dirname);
   for await (const dirent of dirents) {
     const childRoute = await scanDir(
@@ -32,6 +38,7 @@ async function scanDir(dirname, isFile) {
   }
 
   route.childRoutes.sort((a, b) => {
+    // 每种匹配模式有不同的优先级，需要对其进行排序
     if (a.isDynamic && b.isDynamic) {
       const pa = a.path,
         pb = b.path;
