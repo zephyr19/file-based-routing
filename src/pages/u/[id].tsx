@@ -1,6 +1,6 @@
 import React from "react";
-import Link from "../../../utils/Link";
-import { useRouter } from "../../../utils/router";
+import Link from "@utils/Link";
+import { useRouter } from "@utils/router";
 
 const User = () => {
   const { query } = useRouter();

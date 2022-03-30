@@ -1,4 +1,5 @@
-import { useRouter } from "../../../utils/router";
+import React from "react";
+import { useRouter } from "@utils/router";
 
 export default function BlogOptionalCatchAllRoutes() {
   const { query } = useRouter();

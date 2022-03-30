@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import Link from "../../../../utils/Link";
-import { useRouter } from "../../../../utils/router";
+import React from "react";
+import Link from "@utils/Link";
+import { useRouter } from "@utils/router";
 
 const Comments = () => {
   const { query } = useRouter();
