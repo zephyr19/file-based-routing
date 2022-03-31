@@ -70,15 +70,21 @@ async function createServer(
           "<!--IMPORT_APP_STATEMENT-->",
           `
 <script type="module">
+	import React from "react";
   import ReactDOM from "react-dom";
-  import { RouterContextProvider } from '/utils/router';
+  import { RouterContextProvider } from "/utils/router";
   import App from "/src/pages/${APP_URL}";
 
   ReactDOM.hydrate(
-    <RouterContextProvider value={${query}}>
-      <App />
-    <RouterContextProvider />
-  , document.getElementById("app"));
+    /*#__PURE__*/ React.createElement(
+      RouterContextProvider,
+      {
+        value: ${JSON.stringify({ query: query })}
+      },
+      /*#__PURE__*/ React.createElement(App, null)
+    ),
+    document.getElementById("app")
+  );
 </script>
           `
         );
