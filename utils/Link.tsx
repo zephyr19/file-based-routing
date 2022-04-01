@@ -1,10 +1,12 @@
 import React from "react";
+import { useRouter } from "./router";
 
 interface LinkProps {
   href: string;
 }
 
 const Link = ({ href, children }: React.PropsWithChildren<LinkProps>) => {
+  const { push } = useRouter();
   if (typeof children === "string") {
     children = <a>{children}</a>;
   }
@@ -14,7 +16,7 @@ const Link = ({ href, children }: React.PropsWithChildren<LinkProps>) => {
   const childProps = {
     onClick() {
       child.props.onClick?.();
-      history.pushState(null, "", href);
+      push(href);
     },
   };
 
