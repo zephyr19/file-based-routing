@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useRouter } from "./router";
 
 interface LinkProps {
@@ -13,12 +13,12 @@ const Link = ({ href, children }: React.PropsWithChildren<LinkProps>) => {
 
   // https://zh-hans.reactjs.org/docs/react-api.html
   const child: any = React.Children.only(children);
-  const childProps = {
+  const childProps = useMemo(() => ({
     onClick() {
       child.props.onClick?.();
       push(href);
     },
-  };
+  }), [href]);
 
   return React.cloneElement(child, childProps);
 };
